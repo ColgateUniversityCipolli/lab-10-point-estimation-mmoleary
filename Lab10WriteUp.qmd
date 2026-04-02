@@ -136,26 +136,96 @@ To help us think about the interpretation, something that was challenging before
 ## Part a
 Suppose a player has a 50\% chance of winning a specific leg, that is let $p=0.50$. Let's look at the probability they win ($x=6$) legs in the match. Compute this probability over a sequence from $\theta=0.5$ to $\theta=1.5$ and plot it using a line where the $x$-axis is $\theta$ and the $y$-axis is $P(X=6)$.
 
+**Solution**
+
+```{r}
+daltbinom(x = 5, size = 11, prob = 0.5, theta = c(0.5, 1, 1.5))
+```
+
+```{r}
+ggdat <- tibble(theta = seq(from = 0.5, to = 1.5, length.out = 1000)) |>
+mutate(PMF = daltbinom(x = 6, size = 11, prob = 0.5, theta = theta))
+
+PMF.plot <- ggplot(ggdat) +
+  geom_line(aes(x = theta, y = PMF)) +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous("Theta Value", breaks = c(0.5, 1, 1.5)) +
+  ylab("P(X = 6)") +
+  theme_bw()
+
+PMF.plot
+```
+
 ## Part b
 Now, plot Altham's Multiplicative Binomial Distribution under the same parameters with $\theta=0.50$, $\theta=1$, and $\theta=1.5$. Use `ncol=1` in `facet_wrap()` to plot the PMFs in a single column for comparing.
+
+```{r}
+ggdat <- tibble(theta = c(0.5, 1, 1.5)) |>
+mutate(PMF = daltbinom(x = 6, size = 11, prob = 0.5, theta = theta))
+
+PMF.plot <- ggplot(ggdat) +
+  geom_linerange(data = ggdat,
+  aes(x = theta, ymin = 0, ymax = PMF)) +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous("Theta Values", breaks = seq(0.5, 1, 1.5))+
+  ylab("P(X = 6)") +
+  facet_wrap(~theta, nrow = NULL, ncol =1)+
+  theme_bw()
+
+PMF.plot
+```
 
 ## Part c
 What is your best assessment of what $\theta$ is doing in this setting. Consider when a 6-0 blowout is most likely, and when a 5-6 nail-biter is most likely. Note here we should treat the match as a fixed $n=11$ as we did for $n=3$ in Lab 8.\
 **Note:** In lab 8, we saw that small $\theta$ meant wins came in bunches (clumped together), so there were more 2-0 wins in a best of three series.
+
+**Solution** 
+
+As theta increases, the chance of a closer match also increases. As shown in the graphs, as theta increases, the probability of winning with only 6 increases. Alternatively, when theta is low, the chances of winning by a larger margin are higher, highlighting the cllustering effect from lab 8. So, it is more likely to have win 6-0 when theta is lower. 
 
 # Question 2
 
 ## Part a
 Altham's Multiplicative Binomial Distribution does not typically simplify to the clean $E(X)=np$ seen in the Binomial distribution, unless $\theta = 1$. Write out the expression that would need to be solved to find $E(X^k)$, and then write a function that computes it given the proposed parameter values $p$ (`prob`) and $\theta$ (`theta`).
 
+**Solution**
+
+$$E(x^k) = \sum_{0}^{11} (x^k)\frac{x}{c} {n \choose x} p^x (1-p)^{n-x} \theta^{x(n-x)}I(x \in \{0, 1, ..., n\})$$
+where
+$$c = \sum_{i=0}^n {n \choose i} p^i (1-p)^{n-i} \theta^{i(n-i)}.$$ 
+
+```{r}
+Expected_daltbinom= function(size, prob, theta, k){
+  x <-0:11
+  summation = x^k * daltbinom(x, size, prob, theta)
+  sum(summation)
+}
+```
+
 ## Part b
 Describe how you can use your answer to part a to find Method of Moments estimates for the parameters $p$ and $\theta$ for Altham's Multiplicative Binomial Distribution based on data.
+
+**Solution**
+
+With the function above multiplied by $\frac{1}{11}$, I can equate the first three $k$ sample moments to the first three $k$ population moments, and then with systems of equations, I can choose $p$ and $\theta$ based on how closely they match the sample and population moments. 
 
 ## Part c
 Write a function that computes the log-likelihood for Altham's Multiplicative Binomial Distribution, given data (`x`) and proposed parameter values $p$ (`prob`) and $\theta$ (`theta`).
 
+**Solution**
+
+```{r}
+Log_likelihood= function(x, prob, theta){
+  sum(log(daltbinom(x, 11, prob, theta)))
+}
+```
+
 ## Part d
 Describe how you can use your answer to part c to find Maximum Likelihood estimates for the parameters $p$ and $\theta$ for Altham's Multiplicative Binomial Distribution based on data.
+
+**Solution**
+
+I can optimize the function in part C to determine where the parameters make the probability of observing my x value most likely. 
 
 # Lab 10
 Peter "Snakebite" Wright is a two-time Professional Darts Corporation World Champion (2020, 2022) and a former World No. 1. He is one of the sport's most decorated players, winning nearly 50 PDC titles including the World Matchplay, UK Open, and multiple European Championships. 
@@ -186,6 +256,12 @@ In `pdc2024.csv`, I have provided the data for the 2024 Premier League season. T
   * Make two columns `WinnerLegs` and `LoserLegs` that keep track of the number of legs each player has won
   
   Summarize the data. What do the data tell us about the breakdown of the results?
+
+```{r}
+dart.data = read.csv("pdc2024.csv") 
+
+dart.data.cleaned = dart.data |> dplyr::filter(Score != "w/o")
+```
 
 ## Altham's Multiplicative Binomial Distribution
 For each player in the 2024 season, use the number of legs won in each match to compute maximium likelihood estimates for $p$ and $\theta$. \
