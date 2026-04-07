@@ -159,17 +159,18 @@ PMF.plot
 ## Part b
 Now, plot Altham's Multiplicative Binomial Distribution under the same parameters with $\theta=0.50$, $\theta=1$, and $\theta=1.5$. Use `ncol=1` in `facet_wrap()` to plot the PMFs in a single column for comparing.
 
-```{r}
-ggdat <- tibble(theta = c(0.5, 1, 1.5)) |>
-mutate(PMF = daltbinom(x = 6, size = 11, prob = 0.5, theta = theta))
+``{r}
+ggdat <- tibble( x = 0:11 ) |>
+  group_by(theta = c(0.5, 1, 1.5)) |>
+mutate(PMF = daltbinom(x = x, size = 11, prob = 0.5, theta = c(0.5, 1, 1.5)))
 
 PMF.plot <- ggplot(ggdat) +
   geom_linerange(data = ggdat,
-  aes(x = theta, ymin = 0, ymax = PMF)) +
+  aes(x = 0:11, ymin = 0, ymax = PMF)) +
   geom_hline(yintercept = 0) +
-  scale_x_continuous("Theta Values", breaks = seq(0.5, 1, 1.5))+
+  scale_x_continuous("x", breaks = 0:11)+
   ylab("P(X = 6)") +
-  facet_wrap(~theta, nrow = NULL, ncol =1)+
+  facet_wrap(~theta, nrow = NULL, ncol = 1) +
   theme_bw()
 
 PMF.plot
@@ -257,11 +258,82 @@ In `pdc2024.csv`, I have provided the data for the 2024 Premier League season. T
   
   Summarize the data. What do the data tell us about the breakdown of the results?
 
+**Solution**
+
 ```{r}
 dart.data = read.csv("pdc2024.csv") 
 
-dart.data.cleaned = dart.data |> dplyr::filter(Score != "w/o")
+dart.data.cleaned = dart.data |> 
+  dplyr::filter(Score != "w/o") |>
+  dplyr::filter(Night != "Finals") |>
+  mutate(WinnerLegs = 6) |>
+  mutate(LoserLegs = as.integer(str_sub(Score, -1)))
+
+playername = c("Luke Littler", "Luke Humphries", "Michael van Gerwen", "Michael Smith","Nathan Aspinall", "Rob Cross", "Gerwyn Price", "Peter Wright")
+
+legswon = rep(NA, 8)
+legslost = rep(NA, 8)
+
+for (i in 1:length(playername)){
+  win = sum(dart.data.cleaned$WinnerLegs[dart.data.cleaned$Winner==playername[i]]) + 
+  sum(dart.data.cleaned$LoserLegs[dart.data.cleaned$Loser==playername[i]])
+  lost = sum(dart.data.cleaned$WinnerLegs[dart.data.cleaned$Loser==playername[i]]) +
+  sum(dart.data.cleaned$LoserLegs[dart.data.cleaned$Winner==playername[i]])
+
+legswon[i] = win
+legslost[i] = lost
+}
+
+player.stats = tibble(
+  Player = playername,
+  Legs_Won = legswon,
+  Legs_Lost = legslost,
+  Prop_Win = Legs_Won / (Legs_Won + Legs_Lost)
+)
 ```
+
+```{r}
+#| label: fig-bar-win-percent
+#| fig-cap: "Each Players' Win Percentage."
+#| fig-width: 5
+#| fig-height: 3
+#| scale: "80%"
+#| fig-align: "center"
+#| size: scriptsize
+
+ggplot(player.stats) + # Specify Data
+geom_bar(aes(x = reorder(Player, Prop_Win), # Specify x-axis
+             y = Prop_Win), stat = "identity") + # Specify y-axis
+geom_hline(yintercept = 0)+ # Plot x-axis
+theme_bw() + # A cleaner theme
+labs(x = "Player", # Specify axis labels
+     y = "Proportion of Wins") +
+ggtitle("Each Players' Win Percentage")+ # Plot title
+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+player.stats = player.stats |>
+ mutate(Total_Legs = Legs_Lost + Legs_Won) |>
+ mutate(Legs_Spread = Legs_Won - Legs_Lost)
+```
+
+```{r}
+#| label: tbl-Win
+#| tbl-cap: "Each Player's Win Record."
+#| tbl-align: "center"
+
+player.stats |>
+select(Player,
+       Legs_Won,
+       Legs_Lost,
+       Total_Legs,
+       Prop_Win,
+       Legs_Spread)|>
+knitr::kable(digits = 2)
+```
+
+The graphical summary demonstates that the proportion of winning is relatively close between Littler and Humphries, Smith and Gerwen and Aspinall, and Price adn Cross. Wright's Win percentage is much lower than any other player.
 
 ## Altham's Multiplicative Binomial Distribution
 For each player in the 2024 season, use the number of legs won in each match to compute maximium likelihood estimates for $p$ and $\theta$. \
