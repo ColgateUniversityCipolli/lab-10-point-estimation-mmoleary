@@ -139,12 +139,14 @@ Suppose a player has a 50\% chance of winning a specific leg, that is let $p=0.5
 **Solution**
 
 ```{r}
-daltbinom(x = 5, size = 11, prob = 0.5, theta = c(0.5, 1, 1.5))
+daltbinom(x = 6, size = 11, prob = 0.5, theta = c(0.5, 1, 1.5))
 ```
 
 ```{r}
 ggdat <- tibble(theta = seq(from = 0.5, to = 1.5, length.out = 1000)) |>
 mutate(PMF = daltbinom(x = 6, size = 11, prob = 0.5, theta = theta))
+#creates a tibble based on the theta values 
+#  everything else is held constant
 
 PMF.plot <- ggplot(ggdat) +
   geom_line(aes(x = theta, y = PMF)) +
@@ -164,6 +166,8 @@ ggdat <- ggdat <- tidyr::expand_grid(
   x = 0:11,
   theta = c(0.5, 1, 1.5)) |>
   mutate(PMF = daltbinom(x = x, size = 11, prob = 0.5, theta = theta))
+#expand grid allows both columns based on the theta values and x values
+#important for making a facet wrap later
 
 PMF.plot <- ggplot(ggdat) +
   geom_linerange(data = ggdat,
@@ -202,6 +206,9 @@ Expected_daltbinom= function(size, prob, theta, k){
   summation = x^k * daltbinom(x, size, prob, theta)
   sum(summation)
 }
+#creates the given functin in R
+#  its in terms of size, prob, theta, and k
+
 ```
 
 ## Part b
@@ -220,6 +227,9 @@ Write a function that computes the log-likelihood for Altham's Multiplicative Bi
 Log_likelihood= function(x, prob, theta){
   sum(log(daltbinom(x, 11, prob, theta)))
 }
+#creates the given functin in R
+# its in terms of x, prob, theta
+# number of games can be constant
 ```
 
 ## Part d
@@ -267,13 +277,16 @@ dart.data = read.csv("pdc2024.csv")
 dart.data.cleaned = dart.data |> 
   dplyr::filter(Score != "w/o") |>
   dplyr::filter(Night != "Finals") |>
-  mutate(WinnerLegs = 6) |>
-  mutate(LoserLegs = as.integer(str_sub(Score, -1)))
+  mutate(WinnerLegs = 6) |> #any win is just 6 legs
+  mutate(LoserLegs = as.integer(str_sub(Score, -1))) 
+    #uses the last character in the score and makes it an integar
+    #Possible bc it can never be more than 5
 
 playername = c("Luke Littler", "Luke Humphries", "Michael van Gerwen", "Michael Smith","Nathan Aspinall", "Rob Cross", "Gerwyn Price", "Peter Wright")
 
 legswon = rep(NA, 8)
-legslost = rep(NA, 8)
+legslost = rep(NA, 8) 
+#repeat for each of the platers
 
 for (i in 1:length(playername)){
   win = sum(dart.data.cleaned$WinnerLegs[dart.data.cleaned$Winner==playername[i]]) + 
@@ -284,6 +297,10 @@ for (i in 1:length(playername)){
 legswon[i] = win
 legslost[i] = lost
 }
+#If they are the winner, add the winners legs to win total, 
+# if they are the loser, add the loser's legs won to win total
+# If they are the loser, add the winner's legs to lost total
+# If they are the winner, add the loser's legs to lost total
 
 player.stats = tibble(
   Player = playername,
@@ -291,6 +308,7 @@ player.stats = tibble(
   Legs_Lost = legslost,
   Prop_Win = Legs_Won / (Legs_Won + Legs_Lost)
 )
+#makes tibble w/ all info for a graph
 ```
 
 ```{r}
@@ -303,8 +321,8 @@ player.stats = tibble(
 #| size: scriptsize
 
 ggplot(player.stats) + # Specify Data
-geom_bar(aes(x = reorder(Player, Prop_Win), # Specify x-axis
-             y = Prop_Win), stat = "identity") + # Specify y-axis
+geom_bar(aes(x = reorder(Player, Prop_Win), # Specify x-axis, also puts in order of prob
+             y = Prop_Win), stat = "identity") + # Specify y-axis, also doesn't compute anything new
 geom_hline(yintercept = 0)+ # Plot x-axis
 theme_bw() + # A cleaner theme
 labs(x = "Player", # Specify axis labels
@@ -317,6 +335,7 @@ theme(axis.text.x = element_text(angle = 45, hjust = 1))
 player.stats = player.stats |>
  mutate(Total_Legs = Legs_Lost + Legs_Won) |>
  mutate(Legs_Spread = Legs_Won - Legs_Lost)
+#making data for table
 ```
 
 ```{r}
@@ -332,6 +351,7 @@ select(Player,
        Prop_Win,
        Legs_Spread)|>
 knitr::kable(digits = 2)
+#creating table
 ```
 
 The graphical summary demonstates that the proportion of winning is relatively close between Littler and Humphries, Smith and Gerwen and Aspinall, and Price and Cross. Wright's Win percentage is much lower than any other player. Other than Wright, the other players win percentage are at most 5% away from a 50/50 chance of winning. In the numerical summary, Luke Littler has both the most legs lost and legs won, likely because he competed in the most total legs. This demonstrates that his matches typically went on for longer. Alternatively, Wright has the lowest amount of legs lost, but this is largely because he lost extremely quickly. This then affirms my choice to use win proportion over count in the graphical summary as the number of legs varies in each match and can poorly represent those with longer or shorter average matches. More accurate measures include the Winning percentage of the players and the spread, demonstrating how often they won and the frequency of winning compared to the frequency of losing. The Spread is a more of an accurate measure of count compared to just legs won or lost as it provides a clear representation of if a player wins or loses more.
@@ -350,22 +370,33 @@ For each player in the 2024 season, use the number of legs won in each match to 
 dart.data.cleaned = dart.data.cleaned|>
 mutate(lose = as.integer(str_sub(Score, -1)),
        win = as.integer(str_sub(Score, 1,1)))
+       #establishes the number of legs won/lost
+       #saves them in data set as columns
 
-Littler = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Luke Littler"], dart.data.cleaned$lose[dart.data.cleaned$Loser=="Luke Littler"]))
+Littler = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Luke Littler"], 
+dart.data.cleaned$lose[dart.data.cleaned$Loser=="Luke Littler"]))
+#Legs won when Littler is listed as loser/winner
 
-Humphries = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Luke Humphries"], dart.data.cleaned$lose[dart.data.cleaned$Loser=="Luke Humphries"]))
+Humphries = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Luke Humphries"], 
+dart.data.cleaned$lose[dart.data.cleaned$Loser=="Luke Humphries"]))
 
-Gerwen = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Michael van Gerwen"], dart.data.cleaned$lose[dart.data.cleaned$Loser=="Michael van Gerwen"]))
+Gerwen = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Michael van Gerwen"], 
+dart.data.cleaned$lose[dart.data.cleaned$Loser=="Michael van Gerwen"]))
 
-Smith = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Michael Smith"], dart.data.cleaned$lose[dart.data.cleaned$Loser=="Michael Smith"]))
+Smith = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Michael Smith"], 
+dart.data.cleaned$lose[dart.data.cleaned$Loser=="Michael Smith"]))
 
-Aspinall = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Nathan Aspinall"], dart.data.cleaned$lose[dart.data.cleaned$Loser=="Nathan Aspinall"]))
+Aspinall = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Nathan Aspinall"], 
+dart.data.cleaned$lose[dart.data.cleaned$Loser=="Nathan Aspinall"]))
 
-Cross = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Rob Cross"], dart.data.cleaned$lose[dart.data.cleaned$Loser=="Rob Cross"]))
+Cross = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Rob Cross"], 
+dart.data.cleaned$lose[dart.data.cleaned$Loser=="Rob Cross"]))
 
-Price = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Gerwyn Price"], dart.data.cleaned$lose[dart.data.cleaned$Loser=="Gerwyn Price"]))
+Price = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Gerwyn Price"], 
+dart.data.cleaned$lose[dart.data.cleaned$Loser=="Gerwyn Price"]))
 
-Wright = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Peter Wright"], dart.data.cleaned$lose[dart.data.cleaned$Loser=="Peter Wright"]))
+Wright = as.numeric(c(dart.data.cleaned$win[dart.data.cleaned$Winner=="Peter Wright"], 
+dart.data.cleaned$lose[dart.data.cleaned$Loser=="Peter Wright"]))
 
 win = list(Littler,
            Humphries,
@@ -375,10 +406,11 @@ win = list(Littler,
            Cross,
            Price,
            Wright)
+#makes list of each player's wins for next steps
 ```
 
 ```{r}
-daltbinom <- function(x, size, prob, theta){
+daltbinom = function(x, size, prob, theta){
  normalizing.constant = 0
 
  for(j in 0:size){
@@ -389,19 +421,22 @@ daltbinom <- function(x, size, prob, theta){
  choose(size, x) * prob^x * (1-prob)^(size-x) * theta^(x*(size-x)) *
  (x>=0)*(x<=size)
  }
+#adjusting past function for multiplicative beta binomial distribution
 
-llaltbinom <- function(par, data, mle=F){
-  prob <- ifelse(mle, 1/(1+exp(-par[1])), par[1])
-  theta <- ifelse(mle, exp(par[2]), par[2])
-
- ll <- sum(log(daltbinom(data, size = 11, prob = prob, theta = theta)))
+llaltbinom = function(par, data, mle=F){
+  prob = ifelse(mle, 1/(1+exp(-par[1])), par[1])
+  theta = ifelse(mle, exp(par[2]), par[2])
+  ll = sum(log(daltbinom(data, size = 11, prob = prob, theta = theta)))
  ifelse(mle, -ll, ll)
  }
 
 results = tibble(
-  Player = c("Luke Littler", "Luke Humphries", "Michael van Gerwen", "Michael Smith", "Nathan Aspinall", "Rob Cross", "Gerwyn Price", "Peter Wright"),
+  Player = c("Luke Littler", "Luke Humphries", "Michael van Gerwen", 
+  "Michael Smith", "Nathan Aspinall", "Rob Cross", 
+  "Gerwyn Price", "Peter Wright"),
   Probability = rep(NA, 8),
   Theta = rep(NA, 8))
+  #ensures each player has a prob and theta value
 
 for (i in 1:length(win)){
  mle <- optim(par = c(0,0), # initial guess
@@ -410,12 +445,12 @@ for (i in 1:length(win)){
    mle=T) # minimizing!!!!!
  results$Probability[i] <- 1/(1+exp(-mle$par[1]))
  results$Theta[i]<- exp(mle$par[2])
-}
+} #optimizes the past function for the mle parameter
 ```
 
 
 ```{r}
-#| label: tbl-Parameters
+#| label: tbl-Parameters-MB
 #| tbl-cap: "Each Player's Parameters."
 #| tbl-align: "center"
 
@@ -424,6 +459,7 @@ select(Player,
        Probability,
        Theta)|>
 knitr::kable(digits = 2)
+#creates table
 ```
 
 The probability parameter indicates what an accurate estimate of a  given player's probability of winning a match. The theta parameter is a good estimate for how likely the match is to be close. A higher theta value indicates a greater liklihood of a close match. Therefore, a low theta value and a low probability indicate a high chance of losing quickly in a match. A high theta value and a low probability indicate a greater chance to lose, but it is more likely to be close and there is a greater chance to win than if the theta value was lower. A low theta value and a high probability indicate a greater chance to win, but it is less likely to be close and thus, there is a greater chance to lose than if the theta value was higher. A high theta value and a high probability indicate a high chance of winning quickly in a match.
@@ -446,13 +482,12 @@ For each player in the 2024 season, use the number of legs won in each match to 
 * Make comments about the MLEs in the context of the standings.\
 **Note**: The players alternate who throws first in a leg has the mathematical "head start" to reach a finish before their opponent can take another turn. Players alternate who throws first with each leg.
 
-``{r}
+```{r}
 daltbbinom.single <- function(x, size, alpha, beta, theta){
  integrand <- function(p) {
- sapply(p, function(p_val){
- daltbinom(x, size, p_val, theta) * dbeta(p_val, alpha, beta)
- }
- )
+  sapply(p, function(p_val){
+    daltbinom(x, size, p_val, theta) * dbeta(p_val, alpha, beta)
+    })
  }
  res <- try(integrate(integrand, lower = 1e-7, upper = 1 - 1e-7)$value *
  (x>=0)*(x<=size),
@@ -460,6 +495,7 @@ daltbbinom.single <- function(x, size, alpha, beta, theta){
  if(inherits(res, "try-error")) return(0.1^6)
 res
 }
+#creates the function for the distribution
  
  daltbbinom <- function(x, size, alpha, beta, theta){
 sapply(X=x, FUN=daltbbinom.single, size=size, alpha=alpha, beta=beta, theta=theta)}
@@ -467,13 +503,12 @@ lldaltbbinom <- function(par, data, mle = F){
 alpha <- ifelse(mle, exp(par[1]), par[1])
 beta <- ifelse(mle, exp(par[2]), par[2])
 theta <- ifelse(mle, exp(par[3]), par[3])
-}
-# calculate 7 times for each player instead of n times
-
 p <- daltbbinom(0:6, size = 11, alpha, beta, theta)
-# the first location. data (x) is 0-6
+# x has to be between 0 and 6
 ll <- sum(log(p[data+1]))
-ifelse(mle, -ll, ll)
+ifelse(mle, -ll, ll)}
+#computes the log likelihood function 
+
 # create tibble to store data
 results.2 <- tibble(
 Player = c("Luke Littler", "Luke Humphries", "Michael van Gerwen", "Michael Smith",
@@ -481,29 +516,35 @@ Player = c("Luke Littler", "Luke Humphries", "Michael van Gerwen", "Michael Smit
 Alpha = rep(NA, 8),
 Beta = rep(NA, 8),
 Theta = rep(NA, 8),
-# name of column can't have space
 Mean = rep(NA, 8),
 SD = rep(NA, 8))
- # loop
+ # loop to compute each value for each player
  for(i in 1:length(win)){
  mle <- optim(par = c(0,0,0),
  fn = lldaltbbinom,
- # use [[]] instead of [] because it's a list
  data= win[[i]],
  mle=T)
  # extract before using
  a <- exp(mle$par[1])
- b <- exp(mle$par[2])}
+ b <- exp(mle$par[2])
  
  mean = a/(a+b)
  sd = sqrt((a*b)/((a+b)^2*(a+b+1)))
+ #performs the mean and sd calculation for AMBB Distribution
  
  results.2$Alpha[i] <- exp(mle$par[1])
  results.2$Beta[i] <- exp(mle$par[2])
  results.2$Theta[i]<- exp(mle$par[3])
  results.2$Mean[i] <- mean
  results.2$SD[i] <- sd
+ #Saves each of the results within the results.2 data
+ }
+```
 
+```{r}
+#| label: tbl-Parameters-MBB
+#| tbl-cap: "Each Player's Multiplicative Beta Binomial Parameters."
+#| tbl-align: "center"
 
 results.2 |>
 select(Player,
@@ -513,7 +554,14 @@ select(Player,
        Mean,
        SD)|>
 knitr::kable(digits = 2)
+#creates a table with all parameter and distribution values
 ```
 
 ## Executive Summary
 Summarize the work you've done here to provide a brief (200-300 word) data-driven summary of the 2024 Premier League season using your work in Lab 10. Your summary should be professional, clear, and all claims should be corroborated with statistical support.
+
+In the 2024 Premier Dart League, certain players performed better and some played worse across all the different probability distributions, supporting that their overall performance was better/worse regardless of model. Additionally, the role of how close a match was important as it creates greater variability in a players probability. In the Altham's Multiplicative Beta Binomial distribution, which allows greater variability in the probability of winning each leg and captures if a player usually has closer matches. For example, Peter Wright has a mean probability of winning a match of 0.20, which is established by his beta value being much higher than the alpha value, and he has a standard deviation of 0.13, caused by his lower theta value that demonstrates that his matches are less close than any other player's. This then demonstrates how based on this model, Wright has the lowest likelihood of winning and will likely lose quickly and by a large margin. Alternatively, Luke Littler has the best mean probability of winning, created by the close alpha and beta values, but his variability is much higher than anyone else's because his matches are more likely to be very close, as determined by his incredibly high theta value. This model provides more information on the circumstances behind the probability of each player winning, and does not assume a set probability for each match, thus creating a more exact model than the Altham's Multiplicative Binomial Distribution. which did not sufficiently capture the extent of how not every match has the same probability of winning for a given player.
+
+# Conclusion
+
+I used the tidyverse package [@tidyverse] to read the csv, and both the tidyverse package [@tidyverse] and the patchwork package [@patchwork] to create graphs, the knitr package [@knitr] to help organize and reference graphs, the extraDistr package [@extraDistr] for the Beta Binomial Distribution, all while using R [@R] as my coding language.
